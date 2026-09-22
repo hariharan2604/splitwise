@@ -1,7 +1,7 @@
 {
     "info": {
         "name": "Splitwise MVP API",
-        "description": "Requests for the Splitwise MVP expense sharing API.",
+        "description": "Splitwise users, expenses, activity, and balances.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "variable": [
@@ -49,31 +49,20 @@
                                 }
                             }
                         },
-                        "url": {
-                            "raw": "{{server_url}}/users",
-                            "host": [
-                                "{{server_url}}"
-                            ],
-                            "path": [
-                                "users"
-                            ]
-                        }
+                        "url": "{{server_url}}/users"
                     }
                 },
                 {
                     "name": "Get user",
                     "request": {
                         "method": "GET",
-                        "url": {
-                            "raw": "{{server_url}}/users/{{user_id}}",
-                            "host": [
-                                "{{server_url}}"
-                            ],
-                            "path": [
-                                "users",
-                                "{{user_id}}"
-                            ]
-                        }
+                        "header": [
+                            {
+                                "key": "X-User-Id",
+                                "value": "{{user_id}}"
+                            }
+                        ],
+                        "url": "{{server_url}}/users/{{user_id}}"
                     }
                 },
                 {
@@ -84,6 +73,10 @@
                             {
                                 "key": "Content-Type",
                                 "value": "application/json"
+                            },
+                            {
+                                "key": "X-User-Id",
+                                "value": "{{user_id}}"
                             }
                         ],
                         "body": {
@@ -95,32 +88,20 @@
                                 }
                             }
                         },
-                        "url": {
-                            "raw": "{{server_url}}/users/{{user_id}}",
-                            "host": [
-                                "{{server_url}}"
-                            ],
-                            "path": [
-                                "users",
-                                "{{user_id}}"
-                            ]
-                        }
+                        "url": "{{server_url}}/users/{{user_id}}"
                     }
                 },
                 {
                     "name": "Delete user",
                     "request": {
                         "method": "DELETE",
-                        "url": {
-                            "raw": "{{server_url}}/users/{{user_id}}",
-                            "host": [
-                                "{{server_url}}"
-                            ],
-                            "path": [
-                                "users",
-                                "{{user_id}}"
-                            ]
-                        }
+                        "header": [
+                            {
+                                "key": "X-User-Id",
+                                "value": "{{user_id}}"
+                            }
+                        ],
+                        "url": "{{server_url}}/users/{{user_id}}"
                     }
                 }
             ]
@@ -136,32 +117,22 @@
                             {
                                 "key": "Content-Type",
                                 "value": "application/json"
+                            },
+                            {
+                                "key": "X-User-Id",
+                                "value": "{{user_id}}"
                             }
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"name\": \"Dinner\",\n  \"value\": 1200,\n  \"currency\": \"INR\",\n  \"date\": \"2026-09-22\",\n  \"paid_by\": {{user_id}},\n  \"split_type\": \"EQUAL\",\n  \"members\": [\n    {\"user_id\": {{user_id}}},\n    {\"user_id\": {{second_user_id}}},\n    {\"user_id\": {{third_user_id}}}\n  ]\n}",
+                            "raw": "{\n  \"name\": \"Dinner\",\n  \"value\": 1200,\n  \"currency\": \"INR\",\n  \"date\": \"2026-09-22\",\n  \"paid_by\": {{user_id}},\n  \"split_type\": \"EQUAL\",\n  \"members\": [\n    { \"user_id\": {{user_id}} },\n    { \"user_id\": {{second_user_id}} },\n    { \"user_id\": {{third_user_id}} }\n  ]\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
                                 }
                             }
                         },
-                        "url": {
-                            "raw": "{{server_url}}/expenses?user_id={{user_id}}",
-                            "host": [
-                                "{{server_url}}"
-                            ],
-                            "path": [
-                                "expenses"
-                            ],
-                            "query": [
-                                {
-                                    "key": "user_id",
-                                    "value": "{{user_id}}"
-                                }
-                            ]
-                        }
+                        "url": "{{server_url}}/expenses"
                     }
                 },
                 {
@@ -172,32 +143,22 @@
                             {
                                 "key": "Content-Type",
                                 "value": "application/json"
+                            },
+                            {
+                                "key": "X-User-Id",
+                                "value": "{{user_id}}"
                             }
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"name\": \"Hotel\",\n  \"value\": 3000,\n  \"currency\": \"INR\",\n  \"date\": \"2026-09-22\",\n  \"paid_by\": {{user_id}},\n  \"split_type\": \"EXACT\",\n  \"members\": [\n    {\"user_id\": {{user_id}}, \"share_amount\": 1500},\n    {\"user_id\": {{second_user_id}}, \"share_amount\": 1000},\n    {\"user_id\": {{third_user_id}}, \"share_amount\": 500}\n  ]\n}",
+                            "raw": "{\n  \"name\": \"Hotel\",\n  \"value\": 3000,\n  \"currency\": \"INR\",\n  \"date\": \"2026-09-22\",\n  \"paid_by\": {{user_id}},\n  \"split_type\": \"EXACT\",\n  \"members\": [\n    { \"user_id\": {{user_id}}, \"share_amount\": 1500 },\n    { \"user_id\": {{second_user_id}}, \"share_amount\": 1000 },\n    { \"user_id\": {{third_user_id}}, \"share_amount\": 500 }\n  ]\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
                                 }
                             }
                         },
-                        "url": {
-                            "raw": "{{server_url}}/expenses?user_id={{user_id}}",
-                            "host": [
-                                "{{server_url}}"
-                            ],
-                            "path": [
-                                "expenses"
-                            ],
-                            "query": [
-                                {
-                                    "key": "user_id",
-                                    "value": "{{user_id}}"
-                                }
-                            ]
-                        }
+                        "url": "{{server_url}}/expenses"
                     }
                 },
                 {
@@ -208,54 +169,35 @@
                             {
                                 "key": "Content-Type",
                                 "value": "application/json"
+                            },
+                            {
+                                "key": "X-User-Id",
+                                "value": "{{user_id}}"
                             }
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"name\": \"Trip taxi\",\n  \"value\": 1000,\n  \"currency\": \"INR\",\n  \"date\": \"2026-09-22\",\n  \"paid_by\": {{user_id}},\n  \"split_type\": \"PERCENTAGE\",\n  \"members\": [\n    {\"user_id\": {{user_id}}, \"percentage\": 50},\n    {\"user_id\": {{second_user_id}}, \"percentage\": 30},\n    {\"user_id\": {{third_user_id}}, \"percentage\": 20}\n  ]\n}",
+                            "raw": "{\n  \"name\": \"Trip taxi\",\n  \"value\": 1000,\n  \"currency\": \"INR\",\n  \"date\": \"2026-09-22\",\n  \"paid_by\": {{user_id}},\n  \"split_type\": \"PERCENTAGE\",\n  \"members\": [\n    { \"user_id\": {{user_id}}, \"percentage\": 50 },\n    { \"user_id\": {{second_user_id}}, \"percentage\": 30 },\n    { \"user_id\": {{third_user_id}}, \"percentage\": 20 }\n  ]\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
                                 }
                             }
                         },
-                        "url": {
-                            "raw": "{{server_url}}/expenses?user_id={{user_id}}",
-                            "host": [
-                                "{{server_url}}"
-                            ],
-                            "path": [
-                                "expenses"
-                            ],
-                            "query": [
-                                {
-                                    "key": "user_id",
-                                    "value": "{{user_id}}"
-                                }
-                            ]
-                        }
+                        "url": "{{server_url}}/expenses"
                     }
                 },
                 {
                     "name": "Get expense",
                     "request": {
                         "method": "GET",
-                        "url": {
-                            "raw": "{{server_url}}/expenses/{{expense_id}}?user_id={{user_id}}",
-                            "host": [
-                                "{{server_url}}"
-                            ],
-                            "path": [
-                                "expenses",
-                                "{{expense_id}}"
-                            ],
-                            "query": [
-                                {
-                                    "key": "user_id",
-                                    "value": "{{user_id}}"
-                                }
-                            ]
-                        }
+                        "header": [
+                            {
+                                "key": "X-User-Id",
+                                "value": "{{user_id}}"
+                            }
+                        ],
+                        "url": "{{server_url}}/expenses/{{expense_id}}"
                     }
                 },
                 {
@@ -266,101 +208,61 @@
                             {
                                 "key": "Content-Type",
                                 "value": "application/json"
+                            },
+                            {
+                                "key": "X-User-Id",
+                                "value": "{{user_id}}"
                             }
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"name\": \"Dinner updated\",\n  \"value\": 1500,\n  \"currency\": \"INR\",\n  \"date\": \"2026-09-22\",\n  \"paid_by\": {{user_id}},\n  \"split_type\": \"EQUAL\",\n  \"members\": [\n    {\"user_id\": {{user_id}}},\n    {\"user_id\": {{second_user_id}}},\n    {\"user_id\": {{third_user_id}}}\n  ]\n}",
+                            "raw": "{\n  \"name\": \"Dinner updated\",\n  \"value\": 1500,\n  \"currency\": \"INR\",\n  \"date\": \"2026-09-22\",\n  \"paid_by\": {{user_id}},\n  \"split_type\": \"EQUAL\",\n  \"members\": [\n    { \"user_id\": {{user_id}} },\n    { \"user_id\": {{second_user_id}} },\n    { \"user_id\": {{third_user_id}} }\n  ]\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
                                 }
                             }
                         },
-                        "url": {
-                            "raw": "{{server_url}}/expenses/{{expense_id}}?user_id={{user_id}}",
-                            "host": [
-                                "{{server_url}}"
-                            ],
-                            "path": [
-                                "expenses",
-                                "{{expense_id}}"
-                            ],
-                            "query": [
-                                {
-                                    "key": "user_id",
-                                    "value": "{{user_id}}"
-                                }
-                            ]
-                        }
+                        "url": "{{server_url}}/expenses/{{expense_id}}"
                     }
                 },
                 {
                     "name": "Delete expense",
                     "request": {
                         "method": "DELETE",
-                        "url": {
-                            "raw": "{{server_url}}/expenses/{{expense_id}}",
-                            "host": [
-                                "{{server_url}}"
-                            ],
-                            "path": [
-                                "expenses",
-                                "{{expense_id}}"
-                            ]
-                        }
+                        "header": [
+                            {
+                                "key": "X-User-Id",
+                                "value": "{{user_id}}"
+                            }
+                        ],
+                        "url": "{{server_url}}/expenses/{{expense_id}}"
                     }
                 },
                 {
                     "name": "Activity current and last month",
                     "request": {
                         "method": "GET",
-                        "url": {
-                            "raw": "{{server_url}}/expenses/activity?user_id={{user_id}}",
-                            "host": [
-                                "{{server_url}}"
-                            ],
-                            "path": [
-                                "expenses",
-                                "activity"
-                            ],
-                            "query": [
-                                {
-                                    "key": "user_id",
-                                    "value": "{{user_id}}"
-                                }
-                            ]
-                        }
+                        "header": [
+                            {
+                                "key": "X-User-Id",
+                                "value": "{{user_id}}"
+                            }
+                        ],
+                        "url": "{{server_url}}/expenses/activity"
                     }
                 },
                 {
                     "name": "Activity custom range",
                     "request": {
                         "method": "GET",
-                        "url": {
-                            "raw": "{{server_url}}/expenses/activity?user_id={{user_id}}&from=2026-09-01&to=2026-09-30",
-                            "host": [
-                                "{{server_url}}"
-                            ],
-                            "path": [
-                                "expenses",
-                                "activity"
-                            ],
-                            "query": [
-                                {
-                                    "key": "user_id",
-                                    "value": "{{user_id}}"
-                                },
-                                {
-                                    "key": "from",
-                                    "value": "2026-09-01"
-                                },
-                                {
-                                    "key": "to",
-                                    "value": "2026-09-30"
-                                }
-                            ]
-                        }
+                        "header": [
+                            {
+                                "key": "X-User-Id",
+                                "value": "{{user_id}}"
+                            }
+                        ],
+                        "url": "{{server_url}}/expenses/activity?from=2026-09-01&to=2026-09-30"
                     }
                 }
             ]
@@ -372,21 +274,13 @@
                     "name": "Get balances",
                     "request": {
                         "method": "GET",
-                        "url": {
-                            "raw": "{{server_url}}/balances?user_id={{user_id}}",
-                            "host": [
-                                "{{server_url}}"
-                            ],
-                            "path": [
-                                "balances"
-                            ],
-                            "query": [
-                                {
-                                    "key": "user_id",
-                                    "value": "{{user_id}}"
-                                }
-                            ]
-                        }
+                        "header": [
+                            {
+                                "key": "X-User-Id",
+                                "value": "{{user_id}}"
+                            }
+                        ],
+                        "url": "{{server_url}}/balances"
                     }
                 }
             ]
