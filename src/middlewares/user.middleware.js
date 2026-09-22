@@ -1,15 +1,14 @@
-import {UnauthorizedError} from "../utils/ApiError"
+import { UnauthorizedError } from "../utils/ApiError";
 
 const userMiddleware = async (req, res, next) => {
+  const userId = req.header("X-User-Id");
 
-   const userId = req.header("X-User-Id");
+  if (!userId)
+    return next(new UnauthorizedError("X-User-Id header is required"));
 
-    if (!userId) 
-      return next(new UnauthorizedError("X-User-Id header is required"))
-   
-    req.userId = Number(userId);
+  req.userId = Number(userId);
 
-    return next();
+  return next();
 };
 
 export default userMiddleware;
