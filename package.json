@@ -1,8 +1,7 @@
 {
-  "name": "express-sequelize-boilerplate",
+  "name": "splitwise-mvp",
   "version": "1.0.0",
   "main": "index.js",
-  "repository": "https://github.com/gadfaria/express-sequelize-boilerplate.git",
   "author": "gadfaria <gadfaria@gmail.com>",
   "license": "MIT",
   "scripts": {

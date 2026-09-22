@@ -1,85 +1,56 @@
-# express-sequelize-boilerplate
+# Splitwise MVP
 
-![Express.js](https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=%2361DAFB)
-![Sequelize](https://img.shields.io/badge/Sequelize-52B0E7?style=for-the-badge&logo=Sequelize&logoColor=white)
+A Splitwise-style expense sharing API built with Node.js, Express, Sequelize, and PostgreSQL or MySQL.
 
-This is a simple boilerplate for building REST APIs in Node.js using Express. Intended for use with PostgreSQL using Sequelize ORM.
+## Setup
 
-
-## Getting Started
-
-Clone the repository
+Install dependencies:
 
 ```bash
-git clone https://github.com/gadfaria/express-sequelize-boilerplate.git
+yarn install
 ```
 
-Enter into the directory
-```bash
-cd express-sequelize-boilerplate/
+Configure the database and server in `.env`:
+
+```env
+SERVER_PORT=3000
+NODE_ENV=development
+DB_DIALECT=postgres
+DB_HOST=localhost
+DB_USER=postgres
+DB_PASS=postgres
+DB_NAME=splitwise
 ```
 
-Install the dependencies
-```bash
-yarn
-```
+Run migrations and start the API:
 
-Set the environment variables
 ```bash
-cp .env.example .env
-```
-
-Running the boilerplate:
-```bash
+yarn sequelize-cli db:migrate
 yarn dev
 ```
 
-## Configuration
+## API
 
-Variables for the environment
+The API returns `{ "success": true, "data": ... }` on success and a consistent error object on failure. Authentication is intentionally outside this MVP; provide the acting user through the existing request context or `user_id` query/body value where required.
 
-| Option | Description |
-| ------ | ------ |
-| SERVER_PORT | Port the server will run on |
-| NODE_ENV | development or production |
-| SERVER_JWT | true or false |
-| SERVER_JWT_SECRET | JWT secret |
-| SERVER_JWT_TIMEOUT | JWT duration time |
-| DB_DIALECT | "mysql", "postgresql", among others |
-| DB_HOST | Database host |
-| DB_USER | Database username |
-| DB_PASS | Database password |
-| DB_NAME | Database name |
-| AWS_KEYID | Access key ID |
-| AWS_SECRETKEY | User secret key |
-| AWS_BUCKET | Bucket name |
+- `POST /users` creates a user with `name`, `email`, `password`, and `default_currency`.
+- `GET /users/:id`, `PUT /users/:id`, and `DELETE /users/:id` manage users.
+- `POST /expenses` creates an equal, exact, or percentage split.
+- `GET /expenses/:id`, `PUT /expenses/:id`, and `DELETE /expenses/:id` manage expenses.
+- `GET /expenses/activity` returns current-month, last-month, or custom-range activity.
+- `GET /balances` computes net balances per counterparty and currency.
 
-## Commands for sequelize 
-```bash
-# Creates the database
-yarn sequelize db:create 
+Expense members use this shape:
 
-# Drops the database
-yarn sequelize db:drop 
-
-# Load migrations
-yarn sequelize db:migrate 
-
-# Undo migrations
-yarn sequelize db:migrate:undo:all 
-
-# Load seeders
-yarn sequelize db:seed:all
+```json
+{
+  "user_id": 2,
+  "share_amount": 50
+}
 ```
 
-## Contributing
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+For percentage splits, use `percentage` instead of `share_amount`. Exact shares are validated against the total expense value before writing.
 
-## License
-[MIT](https://choosealicense.com/licenses/mit/)
+## Database design
 
-
-
-<h5 align="center">
-  ☕ Code and Coffee
-</h5>
+Balances are computed on read. Expense members store final share amounts, while expenses retain the split type for display. Currencies are never converted or netted together.
