@@ -3,7 +3,11 @@ import Expense from "../models/Expense";
 import ExpenseMember from "../models/ExpenseMember";
 import User from "../models/User";
 import calculateShares from "../utils/splitCalculator";
-import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/ApiError";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from "../utils/ApiError";
 
 const expenseAttributes = [
   "id",
@@ -54,7 +58,9 @@ const ensureRequesterIsMember = (requesterId, shares) => {
     (share) => String(share.user_id) === String(requesterId),
   );
   if (!isMember) {
-    throw new BadRequestError("Requesting user must be one of the expense members");
+    throw new BadRequestError(
+      "Requesting user must be one of the expense members",
+    );
   }
 };
 
@@ -156,57 +162,4 @@ const remove = async (id, requesterId) => {
   await expense.destroy();
 };
 
-const activity = async (requesterId, from, to) => {
-  const now = new Date();
-  const startOfLastMonth = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
-  )
-    .toISOString()
-    .slice(0, 10);
-  const dateFilter =
-    from && to ? { [Op.between]: [from, to] } : { [Op.gte]: startOfLastMonth };
-  const memberRows = await ExpenseMember.findAll({
-    where: { user_id: requesterId },
-    attributes: ["expense_id"],
-  });
-  const ids = memberRows.map((row) => row.expense_id);
-  const expenses = await Expense.findAll({
-    where: {
-      id: { [Op.in]: ids.length ? ids : [0] },
-      date: dateFilter,
-    },
-    order: [
-      ["date", "DESC"],
-      ["id", "DESC"],
-    ],
-    attributes: expenseAttributes,
-  });
-  const owned = await Expense.findAll({
-    where: {
-      [Op.or]: [{ created_by: requesterId }, { paid_by: requesterId }],
-      date: dateFilter,
-    },
-    attributes: expenseAttributes,
-  });
-  const byId = new Map(
-    [...expenses, ...owned].map((expense) => [expense.id, expense]),
-  );
-  const items = await Promise.all(
-    [...byId.values()]
-      .sort((left, right) => right.date.localeCompare(left.date))
-      .map((expense) => serializeExpense(expense, requesterId)),
-  );
-  if (from && to) return { range: items };
-
-  const currentMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-  const previousDate = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
-  );
-  const lastMonth = `${previousDate.getUTCFullYear()}-${String(previousDate.getUTCMonth() + 1).padStart(2, "0")}`;
-  return {
-    currentMonth: items.filter((item) => item.date.startsWith(currentMonth)),
-    lastMonth: items.filter((item) => item.date.startsWith(lastMonth)),
-  };
-};
-
-export default { create, find, update, remove, activity };
+export default { create, find, update, remove };
