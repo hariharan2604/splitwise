@@ -152,7 +152,6 @@ test("balance service nets amounts by counterparty and currency", async () => {
   ]);
 });
 
-
 test("database and Express services expose startup contracts", () => {
   assert.equal(typeof sequelizeService.init, "function");
   assert.equal(typeof expressService.init, "function");
