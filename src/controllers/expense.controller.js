@@ -8,7 +8,7 @@ const expenseSchema = Yup.object({
   value: Yup.number().moreThan(0).required(),
   currency: Yup.string().length(3).required(),
   date: Yup.string()
-    .matches(/^\\d{4}-\\d{2}-\\d{2}$/)
+    .matches(/^\d{4}-\d{2}-\d{2}$/)
     .required(),
   paid_by: Yup.number().integer().positive().required(),
   split_type: Yup.string().oneOf(["EQUAL", "EXACT", "PERCENTAGE"]).required(),
@@ -24,12 +24,10 @@ export default {
     try {
       await valid(req.body);
       const userId = requestUserId(req);
-      return res
-        .status(201)
-        .json({
-          success: true,
-          data: await expenseService.create(req.body, userId),
-        });
+      return res.status(201).json({
+        success: true,
+        data: await expenseService.create(req.body, userId),
+      });
     } catch (error) {
       return next(error);
     }

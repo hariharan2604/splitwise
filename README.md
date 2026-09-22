@@ -1,6 +1,6 @@
 # Splitwise MVP
 
-A Splitwise-style expense sharing API built with Node.js, Express, Sequelize, and PostgreSQL or MySQL.
+A Splitwise-style expense sharing API built with Node.js, Express, Sequelize, and MySQL.
 
 ## Setup
 
@@ -15,7 +15,7 @@ Configure the database and server in `.env`:
 ```env
 SERVER_PORT=3000
 NODE_ENV=development
-DB_DIALECT=postgres
+DB_DIALECT=mysql
 DB_HOST=localhost
 DB_USER=postgres
 DB_PASS=postgres
