@@ -3,7 +3,7 @@ import Expense from "../models/Expense";
 import ExpenseMember from "../models/ExpenseMember";
 import User from "../models/User";
 import calculateShares from "../utils/splitCalculator";
-import { BadRequestError, NotFoundError } from "../utils/ApiError";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/ApiError";
 
 const expenseAttributes = [
   "id",
@@ -49,6 +49,34 @@ const validateUsers = async (paidBy, members) => {
     throw new BadRequestError("One or more users do not exist");
 };
 
+const ensureRequesterIsMember = (requesterId, shares) => {
+  const isMember = shares.some(
+    (share) => String(share.user_id) === String(requesterId),
+  );
+  if (!isMember) {
+    throw new BadRequestError("Requesting user must be one of the expense members");
+  }
+};
+
+const ensurePayerIsMember = (paidBy, shares) => {
+  const isMember = shares.some(
+    (share) => String(share.user_id) === String(paidBy),
+  );
+  if (!isMember) {
+    throw new BadRequestError("Payer must be one of the expense members");
+  }
+};
+
+const ensureExpenseAccess = async (expenseId, requesterId) => {
+  const member = await ExpenseMember.findOne({
+    where: { expense_id: expenseId, user_id: requesterId },
+    attributes: ["id"],
+  });
+  if (!member) {
+    throw new ForbiddenError("You do not have access to this expense");
+  }
+};
+
 const writeMembers = async (expenseId, shares, transaction) =>
   ExpenseMember.bulkCreate(
     shares.map((share) => ({ expense_id: expenseId, ...share })),
@@ -57,6 +85,8 @@ const writeMembers = async (expenseId, shares, transaction) =>
 
 const create = async (data, requesterId) => {
   const shares = calculateShares(data.value, data.split_type, data.members);
+  ensureRequesterIsMember(requesterId, shares);
+  ensurePayerIsMember(data.paid_by, shares);
   await validateUsers(data.paid_by, shares);
   const transaction = await Expense.sequelize.transaction();
   try {
@@ -84,13 +114,17 @@ const create = async (data, requesterId) => {
 const find = async (id, requesterId) => {
   const expense = await Expense.findByPk(id, { attributes: expenseAttributes });
   if (!expense) throw new NotFoundError("Expense not found");
+  await ensureExpenseAccess(id, requesterId);
   return serializeExpense(expense, requesterId);
 };
 
 const update = async (id, data, requesterId) => {
   const expense = await Expense.findByPk(id);
   if (!expense) throw new NotFoundError("Expense not found");
+  await ensureExpenseAccess(id, requesterId);
   const shares = calculateShares(data.value, data.split_type, data.members);
+  ensureRequesterIsMember(requesterId, shares);
+  ensurePayerIsMember(data.paid_by, shares);
   await validateUsers(data.paid_by, shares);
   const transaction = await Expense.sequelize.transaction();
   try {
@@ -115,9 +149,11 @@ const update = async (id, data, requesterId) => {
   }
 };
 
-const remove = async (id) => {
-  const deleted = await Expense.destroy({ where: { id } });
-  if (!deleted) throw new NotFoundError("Expense not found");
+const remove = async (id, requesterId) => {
+  const expense = await Expense.findByPk(id);
+  if (!expense) throw new NotFoundError("Expense not found");
+  await ensureExpenseAccess(id, requesterId);
+  await expense.destroy();
 };
 
 const activity = async (requesterId, from, to) => {

@@ -1,18 +1,28 @@
 import * as Yup from "yup";
 import userService from "../services/user.service";
-import { ValidationError } from "../utils/ApiError";
+import { ForbiddenError, ValidationError } from "../utils/ApiError";
+import requestUserId from "../utils/requestUser";
 
 const userSchema = Yup.object({
   name: Yup.string().required(),
   email: Yup.string().email().required(),
   password: Yup.string().min(6).required(),
-  default_currency: Yup.string().length(3).required(),
+  default_currency: Yup.string().length(3).uppercase().required(),
 });
 
 const updateSchema = Yup.object({
   email: Yup.string().email(),
-  default_currency: Yup.string().length(3),
+  default_currency: Yup.string().length(3).uppercase(),
 }).noUnknown();
+
+
+const ensureSelf = (req) => {
+  const requesterId = requestUserId(req);
+  if (requesterId !== Number(req.params.id)) {
+    throw new ForbiddenError("You can only access your own profile");
+  }
+  return requesterId;
+};
 
 const valid = async (schema, body) => {
   if (!(await schema.isValid(body))) throw new ValidationError();
@@ -30,6 +40,7 @@ export default {
   },
   find: async (req, res, next) => {
     try {
+      ensureSelf(req);
       return res.json({
         success: true,
         data: await userService.find(req.params.id),
@@ -41,6 +52,7 @@ export default {
   update: async (req, res, next) => {
     try {
       await valid(updateSchema, req.body);
+      ensureSelf(req);
       return res.json({
         success: true,
         data: await userService.update(req.params.id, req.body),
@@ -51,6 +63,7 @@ export default {
   },
   remove: async (req, res, next) => {
     try {
+      ensureSelf(req);
       await userService.remove(req.params.id);
       return res.json({ success: true, data: null });
     } catch (error) {

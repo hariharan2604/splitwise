@@ -50,12 +50,18 @@ export default function calculateShares(totalValue, splitType, members) {
     if (Math.abs(percentageTotal - 100) > 0.0001) {
       throw new BadRequestError("Percentages must sum to 100");
     }
-    shares = members.map((member, index) => ({
-      user_id: member.user_id,
-      share_amount: fromCents(
-        Math.round((totalCents * percentages[index]) / 100),
-      ),
-    }));
+    let allocated = 0;
+    shares = members.map((member, index) => {
+      const shareCents =
+        index === members.length - 1
+          ? totalCents - allocated
+          : Math.round((totalCents * percentages[index]) / 100);
+      allocated += shareCents;
+      return {
+        user_id: member.user_id,
+        share_amount: fromCents(shareCents),
+      };
+    });
   } else {
     throw new BadRequestError("Unsupported split type");
   }

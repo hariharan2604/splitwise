@@ -1,5 +1,8 @@
 import User from "../models/User";
-import { BadRequestError, NotFoundError } from "../utils/ApiError";
+import Expense from "../models/Expense";
+import ExpenseMember from "../models/ExpenseMember";
+import { Op } from "sequelize";
+import { BadRequestError, ConflictError, NotFoundError } from "../utils/ApiError";
 
 const create = async (data) => {
   const exists = await User.findOne({ where: { email: data.email } });
@@ -41,6 +44,24 @@ const update = async (id, data) => {
 const remove = async (id) => {
   const user = await User.findByPk(id);
   if (!user) throw new NotFoundError("User not found");
+
+  const hasExpenseHistory = await ExpenseMember.findOne({
+    where: { user_id: id },
+    attributes: ["id"],
+  });
+  const hasCreatedOrPaidExpense = await Expense.findOne({
+    where: {
+      [Op.or]: [{ created_by: id }, { paid_by: id }],
+    },
+    attributes: ["id"],
+  });
+
+  if (hasExpenseHistory || hasCreatedOrPaidExpense) {
+    throw new ConflictError(
+      "User cannot be deleted because they have expense history",
+    );
+  }
+
   await user.destroy();
 };
 
