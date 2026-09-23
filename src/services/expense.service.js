@@ -164,4 +164,48 @@ export default {
     await ensureExpenseAccess(id, requesterId);
     await expense.destroy();
   },
+
+  activity: async (requesterId, from, to) => {
+    const now = new Date();
+    const startOfLastMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
+    )
+      .toISOString()
+      .slice(0, 10);
+    const dateFilter =
+      from && to
+        ? { [Op.between]: [from, to] }
+        : { [Op.gte]: startOfLastMonth };
+    const memberRows = await ExpenseMember.findAll({
+      where: { user_id: requesterId },
+      attributes: ["expense_id"],
+      include: [
+        {
+          model: Expense,
+          required: true,
+          where: { date: dateFilter },
+          attributes: expenseAttributes,
+        },
+      ],
+    });
+    const byId = new Map(
+      memberRows.map((row) => [row.Expense.id, row.Expense]),
+    );
+    const items = await Promise.all(
+      [...byId.values()]
+        .sort((left, right) => right.date.localeCompare(left.date))
+        .map((expense) => serializeExpense(expense, requesterId)),
+    );
+    if (from && to) return { range: items };
+
+    const currentMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+    const previousDate = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
+    );
+    const lastMonth = `${previousDate.getUTCFullYear()}-${String(previousDate.getUTCMonth() + 1).padStart(2, "0")}`;
+    return {
+      currentMonth: items.filter((item) => item.date.startsWith(currentMonth)),
+      lastMonth: items.filter((item) => item.date.startsWith(lastMonth)),
+    };
+  },
 };

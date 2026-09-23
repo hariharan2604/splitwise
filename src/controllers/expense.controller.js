@@ -86,4 +86,31 @@ export default {
       return next(error);
     }
   },
+  activity: async (req, res, next) => {
+    try {
+      const hasFrom = Boolean(req.query.from);
+      const hasTo = Boolean(req.query.to);
+      if (hasFrom !== hasTo)
+        throw new ValidationError("Both from and to are required");
+      if (
+        (hasFrom && !isValidDateOnly(req.query.from)) ||
+        (hasTo && !isValidDateOnly(req.query.to))
+      ) {
+        throw new ValidationError("Date range must use valid YYYY-MM-DD dates");
+      }
+      if (hasFrom && req.query.from > req.query.to) {
+        throw new ValidationError("from must be before to");
+      }
+      return res.json({
+        success: true,
+        data: await expenseService.activity(
+          requestUserId(req),
+          req.query.from,
+          req.query.to,
+        ),
+      });
+    } catch (error) {
+      return next(error);
+    }
+  },
 };
