@@ -3,7 +3,11 @@ import Expense from "../models/Expense";
 import ExpenseMember from "../models/ExpenseMember";
 import User from "../models/User";
 import calculateShares from "../utils/splitCalculator";
-import { BadRequestError, ForbiddenError, NotFoundError } from "../utils/ApiError";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from "../utils/ApiError";
 
 const expenseAttributes = [
   "id",
@@ -25,7 +29,7 @@ const loadMembers = async (expenseId) =>
   });
 
 const serializeExpense = async (expense, requesterId) => {
-  const members = await loadMembers(expense.id);
+  const members = expense.ExpenseMembers || (await loadMembers(expense.id));
   const result = expense.toJSON();
   result.members = members;
   result.share_amount =
@@ -54,7 +58,9 @@ const ensureRequesterIsMember = (requesterId, shares) => {
     (share) => String(share.user_id) === String(requesterId),
   );
   if (!isMember) {
-    throw new BadRequestError("Requesting user must be one of the expense members");
+    throw new BadRequestError(
+      "Requesting user must be one of the expense members",
+    );
   }
 };
 
@@ -168,29 +174,16 @@ const activity = async (requesterId, from, to) => {
   const memberRows = await ExpenseMember.findAll({
     where: { user_id: requesterId },
     attributes: ["expense_id"],
-  });
-  const ids = memberRows.map((row) => row.expense_id);
-  const expenses = await Expense.findAll({
-    where: {
-      id: { [Op.in]: ids.length ? ids : [0] },
-      date: dateFilter,
-    },
-    order: [
-      ["date", "DESC"],
-      ["id", "DESC"],
+    include: [
+      {
+        model: Expense,
+        required: true,
+        where: { date: dateFilter },
+        attributes: expenseAttributes,
+      },
     ],
-    attributes: expenseAttributes,
   });
-  const owned = await Expense.findAll({
-    where: {
-      [Op.or]: [{ created_by: requesterId }, { paid_by: requesterId }],
-      date: dateFilter,
-    },
-    attributes: expenseAttributes,
-  });
-  const byId = new Map(
-    [...expenses, ...owned].map((expense) => [expense.id, expense]),
-  );
+  const byId = new Map(memberRows.map((row) => [row.Expense.id, row.Expense]));
   const items = await Promise.all(
     [...byId.values()]
       .sort((left, right) => right.date.localeCompare(left.date))
