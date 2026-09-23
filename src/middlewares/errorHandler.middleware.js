@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { IsApiError, ApiError } from '../utils/ApiError';
-const currentEnv = process.env.NODE_ENV || 'development';
+import { Request, Response, NextFunction } from "express";
+import { IsApiError, ApiError } from "../utils/ApiError";
+const currentEnv = process.env.NODE_ENV || "development";
 /**
  * Global error handler for all routes
  * @param {ApiError} err
@@ -10,11 +10,22 @@ const currentEnv = process.env.NODE_ENV || 'development';
  */
 export default (err, _req, res, next) => {
   if (res.headersSent) return next(err);
-  if (IsApiError(err)) return res.status(err.statusCode).send(err.message);
-  if (currentEnv === 'development') {
+  if (IsApiError(err)) {
+    return res.status(err.statusCode).json({
+      success: false,
+      error: { message: err.message, statusCode: err.statusCode },
+    });
+  }
+  if (currentEnv === "development") {
     console.log(err);
-    return res.status(500).send(err.message);
+    return res.status(500).json({
+      success: false,
+      error: { message: err.message, statusCode: 500 },
+    });
   }
   console.log(err);
-  return res.status(500).send('Something went wrong');
+  return res.status(500).json({
+    success: false,
+    error: { message: "Something went wrong", statusCode: 500 },
+  });
 };

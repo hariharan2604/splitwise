@@ -22,6 +22,11 @@ module.exports = {
         allowNull: false,
         type: Sequelize.STRING,
       },
+      default_currency: {
+        allowNull: false,
+        type: Sequelize.STRING(3),
+        defaultValue: "INR",
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,

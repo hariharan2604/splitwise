@@ -6,9 +6,17 @@ class User extends Model {
     super.init(
       {
         name: Sequelize.STRING,
-        email: Sequelize.STRING,
+        email: {
+          type: Sequelize.STRING,
+          allowNull: false,
+        },
         password: Sequelize.VIRTUAL, //When it is VIRTUAL it does not exist in the database
         password_hash: Sequelize.STRING,
+        default_currency: {
+          type: Sequelize.STRING(3),
+          allowNull: false,
+          defaultValue: "INR",
+        },
       },
       {
         sequelize,
@@ -17,7 +25,7 @@ class User extends Model {
         //underscored: true, //If it's true, does not add camelcase for automatically generated attributes, so if we define updatedAt it will be created as updated_at.
         //freezeTableName: false, //If it's false, it will use the table name in the plural. Ex: Users
         //tableName: 'Users' //Define table name
-      }
+      },
     );
 
     this.addHook("beforeSave", async (user) => {
@@ -30,9 +38,18 @@ class User extends Model {
   }
 
   static associate(models) {
-    this.belongsToMany(models.Address, {
-      through: "UserAddress",
-      foreignKey: "userId",
+    this.hasMany(models.Expense, {
+      as: "paidExpenses",
+      foreignKey: "paid_by",
+    });
+    this.hasMany(models.Expense, {
+      as: "createdExpenses",
+      foreignKey: "created_by",
+    });
+    this.belongsToMany(models.Expense, {
+      through: models.ExpenseMember,
+      foreignKey: "user_id",
+      otherKey: "expense_id",
     });
   }
 

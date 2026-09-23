@@ -82,6 +82,16 @@ export class BadRequestError extends ApiError {
     super(message, 400, type);
   }
 }
+
+export class ConflictError extends ApiError {
+  constructor(
+    message = "Conflict",
+    type = "CONFLICT"
+  ) {
+    super(message, 409, type);
+  }
+}
+
 export class ValidationError extends ApiError {
   constructor(
     message = DEFAULT_ERRORS.VALIDATION.message,
