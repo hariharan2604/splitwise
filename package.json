@@ -6,7 +6,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "node -prof src/index.js"
+    "dev": "nodemon src/index.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.310.0",
