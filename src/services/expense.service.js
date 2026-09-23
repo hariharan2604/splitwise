@@ -89,77 +89,79 @@ const writeMembers = async (expenseId, shares, transaction) =>
     { transaction },
   );
 
-const create = async (data, requesterId) => {
-  const shares = calculateShares(data.value, data.split_type, data.members);
-  ensureRequesterIsMember(requesterId, shares);
-  ensurePayerIsMember(data.paid_by, shares);
-  await validateUsers(data.paid_by, shares);
-  const transaction = await Expense.sequelize.transaction();
-  try {
-    const expense = await Expense.create(
-      {
-        name: data.name,
-        value: data.value,
-        currency: data.currency.toUpperCase(),
-        date: data.date,
-        paid_by: data.paid_by,
-        created_by: requesterId,
-        split_type: data.split_type,
-      },
-      { transaction },
-    );
-    await writeMembers(expense.id, shares, transaction);
-    await transaction.commit();
+export default {
+  create: async (data, requesterId) => {
+    const shares = calculateShares(data.value, data.split_type, data.members);
+    ensureRequesterIsMember(requesterId, shares);
+    ensurePayerIsMember(data.paid_by, shares);
+    await validateUsers(data.paid_by, shares);
+    const transaction = await Expense.sequelize.transaction();
+    try {
+      const expense = await Expense.create(
+        {
+          name: data.name,
+          value: data.value,
+          currency: data.currency.toUpperCase(),
+          date: data.date,
+          paid_by: data.paid_by,
+          created_by: requesterId,
+          split_type: data.split_type,
+        },
+        { transaction },
+      );
+      await writeMembers(expense.id, shares, transaction);
+      await transaction.commit();
+      return serializeExpense(expense, requesterId);
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+
+  find: async (id, requesterId) => {
+    const expense = await Expense.findByPk(id, {
+      attributes: expenseAttributes,
+    });
+    if (!expense) throw new NotFoundError("Expense not found");
+    await ensureExpenseAccess(id, requesterId);
     return serializeExpense(expense, requesterId);
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
-};
+  },
 
-const find = async (id, requesterId) => {
-  const expense = await Expense.findByPk(id, { attributes: expenseAttributes });
-  if (!expense) throw new NotFoundError("Expense not found");
-  await ensureExpenseAccess(id, requesterId);
-  return serializeExpense(expense, requesterId);
-};
+  update: async (id, data, requesterId) => {
+    const expense = await Expense.findByPk(id);
+    if (!expense) throw new NotFoundError("Expense not found");
+    await ensureExpenseAccess(id, requesterId);
+    const shares = calculateShares(data.value, data.split_type, data.members);
+    ensureRequesterIsMember(requesterId, shares);
+    ensurePayerIsMember(data.paid_by, shares);
+    await validateUsers(data.paid_by, shares);
+    const transaction = await Expense.sequelize.transaction();
+    try {
+      await expense.update(
+        {
+          name: data.name,
+          value: data.value,
+          currency: data.currency.toUpperCase(),
+          date: data.date,
+          paid_by: data.paid_by,
+          split_type: data.split_type,
+        },
+        { transaction },
+      );
+      await ExpenseMember.destroy({ where: { expense_id: id }, transaction });
+      await writeMembers(id, shares, transaction);
+      await transaction.commit();
+      return serializeExpense(expense, requesterId);
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
 
-const update = async (id, data, requesterId) => {
-  const expense = await Expense.findByPk(id);
-  if (!expense) throw new NotFoundError("Expense not found");
-  await ensureExpenseAccess(id, requesterId);
-  const shares = calculateShares(data.value, data.split_type, data.members);
-  ensureRequesterIsMember(requesterId, shares);
-  ensurePayerIsMember(data.paid_by, shares);
-  await validateUsers(data.paid_by, shares);
-  const transaction = await Expense.sequelize.transaction();
-  try {
-    await expense.update(
-      {
-        name: data.name,
-        value: data.value,
-        currency: data.currency.toUpperCase(),
-        date: data.date,
-        paid_by: data.paid_by,
-        split_type: data.split_type,
-      },
-      { transaction },
-    );
-    await ExpenseMember.destroy({ where: { expense_id: id }, transaction });
-    await writeMembers(id, shares, transaction);
-    await transaction.commit();
-    return serializeExpense(expense, requesterId);
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  remove: async (id, requesterId) => {
+    const expense = await Expense.findByPk(id);
+    if (!expense) throw new NotFoundError("Expense not found");
+    await ensureExpenseAccess(id, requesterId);
+    await expense.destroy();
+  },
 };
-
-const remove = async (id, requesterId) => {
-  const expense = await Expense.findByPk(id);
-  if (!expense) throw new NotFoundError("Expense not found");
-  await ensureExpenseAccess(id, requesterId);
-  await expense.destroy();
-};
-
-export default { create, find, update, remove };
