@@ -20,10 +20,10 @@ const sequelizeService = {
         model.default.init(connection);
       }
 
-      modelFiles.map(async (file) => {
+      for (const file of modelFiles) {
         const model = await import(`../models/${file}`);
         model.default.associate && model.default.associate(connection.models);
-      });
+      }
 
       console.log("[SEQUELIZE] Database service initialized");
     } catch (error) {
