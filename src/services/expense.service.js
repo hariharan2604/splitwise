@@ -1,13 +1,13 @@
 import { Op } from "sequelize";
-import Expense from "../models/Expense";
-import ExpenseMember from "../models/ExpenseMember";
-import User from "../models/User";
-import calculateShares from "../utils/splitCalculator";
+import Expense from "../models/Expense.js";
+import ExpenseMember from "../models/ExpenseMember.js";
+import User from "../models/User.js";
+import calculateShares from "../utils/splitCalculator.js";
 import {
   BadRequestError,
   ForbiddenError,
   NotFoundError,
-} from "../utils/ApiError";
+} from "../utils/ApiError.js";
 
 const expenseAttributes = [
   "id",
@@ -89,77 +89,123 @@ const writeMembers = async (expenseId, shares, transaction) =>
     { transaction },
   );
 
-const create = async (data, requesterId) => {
-  const shares = calculateShares(data.value, data.split_type, data.members);
-  ensureRequesterIsMember(requesterId, shares);
-  ensurePayerIsMember(data.paid_by, shares);
-  await validateUsers(data.paid_by, shares);
-  const transaction = await Expense.sequelize.transaction();
-  try {
-    const expense = await Expense.create(
-      {
-        name: data.name,
-        value: data.value,
-        currency: data.currency.toUpperCase(),
-        date: data.date,
-        paid_by: data.paid_by,
-        created_by: requesterId,
-        split_type: data.split_type,
-      },
-      { transaction },
-    );
-    await writeMembers(expense.id, shares, transaction);
-    await transaction.commit();
+export default {
+  create: async (data, requesterId) => {
+    const shares = calculateShares(data.value, data.split_type, data.members);
+    ensureRequesterIsMember(requesterId, shares);
+    ensurePayerIsMember(data.paid_by, shares);
+    await validateUsers(data.paid_by, shares);
+    const transaction = await Expense.sequelize.transaction();
+    try {
+      const expense = await Expense.create(
+        {
+          name: data.name,
+          value: data.value,
+          currency: data.currency.toUpperCase(),
+          date: data.date,
+          paid_by: data.paid_by,
+          created_by: requesterId,
+          split_type: data.split_type,
+        },
+        { transaction },
+      );
+      await writeMembers(expense.id, shares, transaction);
+      await transaction.commit();
+      return serializeExpense(expense, requesterId);
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+
+  find: async (id, requesterId) => {
+    const expense = await Expense.findByPk(id, {
+      attributes: expenseAttributes,
+    });
+    if (!expense) throw new NotFoundError("Expense not found");
+    await ensureExpenseAccess(id, requesterId);
     return serializeExpense(expense, requesterId);
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
-};
+  },
 
-const find = async (id, requesterId) => {
-  const expense = await Expense.findByPk(id, { attributes: expenseAttributes });
-  if (!expense) throw new NotFoundError("Expense not found");
-  await ensureExpenseAccess(id, requesterId);
-  return serializeExpense(expense, requesterId);
-};
+  update: async (id, data, requesterId) => {
+    const expense = await Expense.findByPk(id);
+    if (!expense) throw new NotFoundError("Expense not found");
+    await ensureExpenseAccess(id, requesterId);
+    const shares = calculateShares(data.value, data.split_type, data.members);
+    ensureRequesterIsMember(requesterId, shares);
+    ensurePayerIsMember(data.paid_by, shares);
+    await validateUsers(data.paid_by, shares);
+    const transaction = await Expense.sequelize.transaction();
+    try {
+      await expense.update(
+        {
+          name: data.name,
+          value: data.value,
+          currency: data.currency.toUpperCase(),
+          date: data.date,
+          paid_by: data.paid_by,
+          split_type: data.split_type,
+        },
+        { transaction },
+      );
+      await ExpenseMember.destroy({ where: { expense_id: id }, transaction });
+      await writeMembers(id, shares, transaction);
+      await transaction.commit();
+      return serializeExpense(expense, requesterId);
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
 
-const update = async (id, data, requesterId) => {
-  const expense = await Expense.findByPk(id);
-  if (!expense) throw new NotFoundError("Expense not found");
-  await ensureExpenseAccess(id, requesterId);
-  const shares = calculateShares(data.value, data.split_type, data.members);
-  ensureRequesterIsMember(requesterId, shares);
-  ensurePayerIsMember(data.paid_by, shares);
-  await validateUsers(data.paid_by, shares);
-  const transaction = await Expense.sequelize.transaction();
-  try {
-    await expense.update(
-      {
-        name: data.name,
-        value: data.value,
-        currency: data.currency.toUpperCase(),
-        date: data.date,
-        paid_by: data.paid_by,
-        split_type: data.split_type,
-      },
-      { transaction },
+  remove: async (id, requesterId) => {
+    const expense = await Expense.findByPk(id);
+    if (!expense) throw new NotFoundError("Expense not found");
+    await ensureExpenseAccess(id, requesterId);
+    await expense.destroy();
+  },
+
+  activity: async (requesterId, from, to) => {
+    const now = new Date();
+    const startOfLastMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
+    )
+      .toISOString()
+      .slice(0, 10);
+    const dateFilter =
+      from && to
+        ? { [Op.between]: [from, to] }
+        : { [Op.gte]: startOfLastMonth };
+    const memberRows = await ExpenseMember.findAll({
+      where: { user_id: requesterId },
+      attributes: ["expense_id"],
+      include: [
+        {
+          model: Expense,
+          required: true,
+          where: { date: dateFilter },
+          attributes: expenseAttributes,
+        },
+      ],
+    });
+    const byId = new Map(
+      memberRows.map((row) => [row.Expense.id, row.Expense]),
     );
-    await ExpenseMember.destroy({ where: { expense_id: id }, transaction });
-    await writeMembers(id, shares, transaction);
-    await transaction.commit();
-    return serializeExpense(expense, requesterId);
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
-};
+    const items = await Promise.all(
+      [...byId.values()]
+        .sort((left, right) => right.date.localeCompare(left.date))
+        .map((expense) => serializeExpense(expense, requesterId)),
+    );
+    if (from && to) return { range: items };
 
-const remove = async (id, requesterId) => {
-  const expense = await Expense.findByPk(id);
-  if (!expense) throw new NotFoundError("Expense not found");
-  await ensureExpenseAccess(id, requesterId);
-  await expense.destroy();
+    const currentMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+    const previousDate = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
+    );
+    const lastMonth = `${previousDate.getUTCFullYear()}-${String(previousDate.getUTCMonth() + 1).padStart(2, "0")}`;
+    return {
+      currentMonth: items.filter((item) => item.date.startsWith(currentMonth)),
+      lastMonth: items.filter((item) => item.date.startsWith(lastMonth)),
+    };
+  },
 };
-
-export default { create, find, update, remove };

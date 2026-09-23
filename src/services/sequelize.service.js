@@ -1,27 +1,24 @@
 import { Sequelize } from "sequelize";
-import databaseConfig from "../config/database";
+import databaseConfig from "../config/database.js";
 import fs from "fs";
 
+const modelsDir = new URL("../models/", import.meta.url);
 const modelFiles = fs
-  .readdirSync(__dirname + "/../models/")
+  .readdirSync(modelsDir)
   .filter((file) => file.endsWith(".js"));
 
 const sequelizeService = {
   init: async () => {
     try {
-      let connection = new Sequelize(databaseConfig);
-
-      /*
-        Loading models automatically
-      */
+      const connection = new Sequelize(databaseConfig);
 
       for (const file of modelFiles) {
-        const model = await import(`../models/${file}`);
+        const model = await import(new URL(file, modelsDir));
         model.default.init(connection);
       }
 
       for (const file of modelFiles) {
-        const model = await import(`../models/${file}`);
+        const model = await import(new URL(file, modelsDir));
         model.default.associate && model.default.associate(connection.models);
       }
 

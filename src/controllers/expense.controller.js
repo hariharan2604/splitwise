@@ -1,7 +1,7 @@
 import * as Yup from "yup";
-import expenseService from "../services/expense.service";
-import requestUserId from "../utils/requestUser";
-import { ValidationError } from "../utils/ApiError";
+import expenseService from "../services/expense.service.js";
+import requestUserId from "../utils/requestUser.js";
+import { ValidationError } from "../utils/ApiError.js";
 
 const isValidDateOnly = (value) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -82,6 +82,33 @@ export default {
     try {
       await expenseService.remove(req.params.id, requestUserId(req));
       return res.json({ success: true, data: null });
+    } catch (error) {
+      return next(error);
+    }
+  },
+  activity: async (req, res, next) => {
+    try {
+      const hasFrom = Boolean(req.query.from);
+      const hasTo = Boolean(req.query.to);
+      if (hasFrom !== hasTo)
+        throw new ValidationError("Both from and to are required");
+      if (
+        (hasFrom && !isValidDateOnly(req.query.from)) ||
+        (hasTo && !isValidDateOnly(req.query.to))
+      ) {
+        throw new ValidationError("Date range must use valid YYYY-MM-DD dates");
+      }
+      if (hasFrom && req.query.from > req.query.to) {
+        throw new ValidationError("from must be before to");
+      }
+      return res.json({
+        success: true,
+        data: await expenseService.activity(
+          requestUserId(req),
+          req.query.from,
+          req.query.to,
+        ),
+      });
     } catch (error) {
       return next(error);
     }

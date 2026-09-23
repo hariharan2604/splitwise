@@ -1,4 +1,4 @@
-import { BadRequestError } from "./ApiError";
+import { BadRequestError } from "./ApiError.js";
 
 export default function requestUserId(req) {
   const value = req.userId;
