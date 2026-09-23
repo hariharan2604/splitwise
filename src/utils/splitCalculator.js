@@ -1,4 +1,4 @@
-import { BadRequestError } from "./ApiError";
+import { BadRequestError } from "./ApiError.js";
 
 const toCents = (value) => {
   const number = Number(value);

@@ -1,4 +1,4 @@
-import { UnauthorizedError } from "../utils/ApiError";
+import { UnauthorizedError } from "../utils/ApiError.js";
 
 const userMiddleware = async (req, res, next) => {
   const userId = req.header("X-User-Id");

@@ -1,6 +1,6 @@
 import { Router } from "express";
-import userController from "../controllers/user.controller";
-import userMiddleware from "../middlewares/user.middleware";
+import userController from "../controllers/user.controller.js";
+import userMiddleware from "../middlewares/user.middleware.js";
 
 const userRoutes = Router();
 userRoutes.post("/users", userController.create);

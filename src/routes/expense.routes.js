@@ -1,6 +1,6 @@
 import { Router } from "express";
-import expenseController from "../controllers/expense.controller";
-import userMiddleware from "../middlewares/user.middleware";
+import expenseController from "../controllers/expense.controller.js";
+import userMiddleware from "../middlewares/user.middleware.js";
 
 const expenseRoutes = Router();
 expenseRoutes.post("/expenses", userMiddleware, expenseController.create);

@@ -1,13 +1,13 @@
 import { Op } from "sequelize";
-import Expense from "../models/Expense";
-import ExpenseMember from "../models/ExpenseMember";
-import User from "../models/User";
-import calculateShares from "../utils/splitCalculator";
+import Expense from "../models/Expense.js";
+import ExpenseMember from "../models/ExpenseMember.js";
+import User from "../models/User.js";
+import calculateShares from "../utils/splitCalculator.js";
 import {
   BadRequestError,
   ForbiddenError,
   NotFoundError,
-} from "../utils/ApiError";
+} from "../utils/ApiError.js";
 
 const expenseAttributes = [
   "id",

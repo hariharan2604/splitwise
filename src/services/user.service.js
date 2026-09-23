@@ -1,8 +1,8 @@
-import User from "../models/User";
-import Expense from "../models/Expense";
-import ExpenseMember from "../models/ExpenseMember";
+import User from "../models/User.js";
+import Expense from "../models/Expense.js";
+import ExpenseMember from "../models/ExpenseMember.js";
 import { Op } from "sequelize";
-import { BadRequestError, ConflictError, NotFoundError } from "../utils/ApiError";
+import { BadRequestError, ConflictError, NotFoundError } from "../utils/ApiError.js";
 
 const create = async (data) => {
   const exists = await User.findOne({ where: { email: data.email } });

@@ -1,7 +1,7 @@
 import * as Yup from "yup";
-import userService from "../services/user.service";
-import { ForbiddenError, ValidationError } from "../utils/ApiError";
-import requestUserId from "../utils/requestUser";
+import userService from "../services/user.service.js";
+import { ForbiddenError, ValidationError } from "../utils/ApiError.js";
+import requestUserId from "../utils/requestUser.js";
 
 const userSchema = Yup.object({
   name: Yup.string().required(),

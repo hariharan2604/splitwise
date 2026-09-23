@@ -1,5 +1,5 @@
-import Expense from "../models/Expense";
-import ExpenseMember from "../models/ExpenseMember";
+import Expense from "../models/Expense.js";
+import ExpenseMember from "../models/ExpenseMember.js";
 
 const addBalance = (balances, counterpartyId, currency, amountCents) => {
   if (String(counterpartyId) === String(balances.userId)) return;

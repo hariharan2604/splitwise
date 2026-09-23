@@ -1,7 +1,7 @@
 import * as Yup from "yup";
-import expenseService from "../services/expense.service";
-import requestUserId from "../utils/requestUser";
-import { ValidationError } from "../utils/ApiError";
+import expenseService from "../services/expense.service.js";
+import requestUserId from "../utils/requestUser.js";
+import { ValidationError } from "../utils/ApiError.js";
 
 const isValidDateOnly = (value) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;

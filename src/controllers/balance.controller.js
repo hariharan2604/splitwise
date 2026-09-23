@@ -1,5 +1,5 @@
-import balanceService from "../services/balance.service";
-import requestUserId from "../utils/requestUser";
+import balanceService from "../services/balance.service.js";
+import requestUserId from "../utils/requestUser.js";
 
 export default {
   get: async (req, res, next) => {
