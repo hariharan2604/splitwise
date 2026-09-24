@@ -9,4 +9,5 @@ export default {
   define: {
     timestamps: true,
   },
+  logging: process.env.NODE_ENV === 'production' ? false : console.log
 };
