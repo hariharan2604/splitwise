@@ -2,6 +2,7 @@ import express from "express";
 import fs from "fs";
 import bodyParser from "body-parser";
 import globalErrorHandler from "../middlewares/errorHandler.middleware.js";
+import morgan from "morgan";
 
 const routesDir = new URL("../routes/", import.meta.url);
 const routeFiles = fs
@@ -21,6 +22,7 @@ const expressService = {
       }
 
       server = express();
+      server.use(morgan("dev"))
       server.use(bodyParser.json());
       server.use(routes);
       server.use(globalErrorHandler);
