@@ -16,6 +16,11 @@ class ExpenseMember extends Model {
           type: Sequelize.DECIMAL(10, 2),
           allowNull: false,
         },
+        is_paid: {
+          type: Sequelize.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+        },
       },
       { sequelize, timestamps: true },
     );

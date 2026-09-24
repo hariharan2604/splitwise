@@ -8,6 +8,18 @@ import {
   NotFoundError,
 } from "../utils/ApiError.js";
 
+const findUser = async (id) => {
+  const user = await User.findByPk(id, {
+    attributes: { exclude: ["password_hash"] },
+  });
+
+  if (!user) {
+    throw new NotFoundError("User not found");
+  }
+
+  return user;
+};
+
 export default {
   create: async (data) => {
     const exists = await User.findOne({ where: { email: data.email } });
@@ -23,16 +35,10 @@ export default {
     return result;
   },
 
-  find: async (id) => {
-    const user = await User.findByPk(id, {
-      attributes: { exclude: ["password_hash"] },
-    });
-    if (!user) throw new NotFoundError("User not found");
-    return user;
-  },
+  find: findUser,
 
   update: async (id, data) => {
-    const user = await find(id);
+    const user = await findUser(id);
     if (data.email && data.email !== user.email) {
       const exists = await User.findOne({ where: { email: data.email } });
       if (exists) throw new BadRequestError("Email is already in use");

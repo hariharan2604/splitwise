@@ -25,7 +25,7 @@ const expenseAttributes = [
 const loadMembers = async (expenseId) =>
   ExpenseMember.findAll({
     where: { expense_id: expenseId },
-    attributes: ["id", "expense_id", "user_id", "share_amount"],
+    attributes: ["id", "expense_id", "user_id", "share_amount", "is_paid"],
   });
 
 const serializeExpense = async (expense, requesterId) => {
@@ -83,9 +83,24 @@ const ensureExpenseAccess = async (expenseId, requesterId) => {
   }
 };
 
-const writeMembers = async (expenseId, shares, transaction) =>
+const writeMembers = async (
+  expenseId,
+  shares,
+  transaction,
+  creatorId,
+  paidStatusByUser = new Map(),
+) =>
   ExpenseMember.bulkCreate(
-    shares.map((share) => ({ expense_id: expenseId, ...share })),
+    shares.map((share) => {
+      const userId = String(share.user_id);
+      return {
+        expense_id: expenseId,
+        ...share,
+        is_paid: paidStatusByUser.has(userId)
+          ? paidStatusByUser.get(userId)
+          : userId === String(creatorId),
+      };
+    }),
     { transaction },
   );
 
@@ -95,6 +110,7 @@ export default {
     ensureRequesterIsMember(requesterId, shares);
     ensurePayerIsMember(data.paid_by, shares);
     await validateUsers(data.paid_by, shares);
+    
     const transaction = await Expense.sequelize.transaction();
     try {
       const expense = await Expense.create(
@@ -109,7 +125,7 @@ export default {
         },
         { transaction },
       );
-      await writeMembers(expense.id, shares, transaction);
+      await writeMembers(expense.id, shares, transaction, requesterId);
       await transaction.commit();
       return serializeExpense(expense, requesterId);
     } catch (error) {
@@ -135,6 +151,13 @@ export default {
     ensureRequesterIsMember(requesterId, shares);
     ensurePayerIsMember(data.paid_by, shares);
     await validateUsers(data.paid_by, shares);
+    const existingMembers = await ExpenseMember.findAll({
+      where: { expense_id: id },
+      attributes: ["user_id", "is_paid"],
+    });
+    const paidStatusByUser = new Map(
+      existingMembers.map((member) => [String(member.user_id), member.is_paid]),
+    );
     const transaction = await Expense.sequelize.transaction();
     try {
       await expense.update(
@@ -149,7 +172,13 @@ export default {
         { transaction },
       );
       await ExpenseMember.destroy({ where: { expense_id: id }, transaction });
-      await writeMembers(id, shares, transaction);
+      await writeMembers(
+        id,
+        shares,
+        transaction,
+        expense.created_by,
+        paidStatusByUser,
+      );
       await transaction.commit();
       return serializeExpense(expense, requesterId);
     } catch (error) {
@@ -163,6 +192,19 @@ export default {
     if (!expense) throw new NotFoundError("Expense not found");
     await ensureExpenseAccess(id, requesterId);
     await expense.destroy();
+  },
+
+  setPaidStatus: async (id, requesterId, isPaid) => {
+    const expense = await Expense.findByPk(id, {
+      attributes: expenseAttributes,
+    });
+    if (!expense) throw new NotFoundError("Expense not found");
+    await ensureExpenseAccess(id, requesterId);
+    await ExpenseMember.update(
+      { is_paid: isPaid },
+      { where: { expense_id: id, user_id: requesterId } },
+    );
+    return serializeExpense(expense, requesterId);
   },
 
   activity: async (requesterId, from, to) => {
