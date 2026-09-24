@@ -13,13 +13,17 @@ export default {
   getBalances: async (userId) => {
     const balances = { userId, values: new Map() };
     const memberRows = await ExpenseMember.findAll({
-      where: { user_id: userId },
+      where: { user_id: userId, is_paid: false },
       include: [{ model: Expense, attributes: ["paid_by", "currency"] }],
     });
     const paidExpenses = await Expense.findAll({
       where: { paid_by: userId },
       include: [
-        { model: ExpenseMember, attributes: ["user_id", "share_amount"] },
+        {
+          model: ExpenseMember,
+          where: { is_paid: false },
+          attributes: ["user_id", "share_amount"],
+        },
       ],
     });
 

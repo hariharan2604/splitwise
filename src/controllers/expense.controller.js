@@ -36,6 +36,10 @@ const expenseSchema = Yup.object({
     .required(),
 }).noUnknown();
 
+const paidStatusSchema = Yup.object({
+  is_paid: Yup.boolean().required(),
+}).noUnknown();
+
 const valid = async (body) => {
   if (!(await expenseSchema.isValid(body))) throw new ValidationError();
   if (!isValidDateOnly(body.date)) {
@@ -82,6 +86,23 @@ export default {
     try {
       await expenseService.remove(req.params.id, requestUserId(req));
       return res.json({ success: true, data: null });
+    } catch (error) {
+      return next(error);
+    }
+  },
+  setPaidStatus: async (req, res, next) => {
+    try {
+      if (!(await paidStatusSchema.isValid(req.body))) {
+        throw new ValidationError();
+      }
+      return res.json({
+        success: true,
+        data: await expenseService.setPaidStatus(
+          req.params.id,
+          requestUserId(req),
+          req.body.is_paid,
+        ),
+      });
     } catch (error) {
       return next(error);
     }
