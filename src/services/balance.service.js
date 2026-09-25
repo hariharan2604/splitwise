@@ -1,7 +1,9 @@
 import Expense from "../models/Expense.js";
 import ExpenseMember from "../models/ExpenseMember.js";
 import User from "../models/User.js";
-import currencyConversion from "../utils/currencyConversion.js";
+import currencyConversion, {
+  normalizeCurrency,
+} from "../utils/currencyConversion.js";
 
 const addBalance = (
   balances,
@@ -11,38 +13,26 @@ const addBalance = (
   default_currency,
 ) => {
   if (String(counterpartyId) === String(balances.userId)) return;
-  const key = `${counterpartyId}`;
-  if (currency === default_currency) {
+
+  const normalizedCurrency = normalizeCurrency(currency);
+  const normalizedDefaultCurrency = normalizeCurrency(default_currency);
+  const key = counterpartyId;
+  
+  if (normalizedCurrency === normalizedDefaultCurrency) {
     balances.values.set(key, (balances.values.get(key) || 0) + amountCents);
-  } else if (default_currency === "INR") {
-    const amount_value = Number((amountCents / 100).toFixed(2));
-    const converted_value = currencyConversion.convertToINR(
-      currency,
-      amount_value,
-    );
-    balances.values.set(
-      key,
-      (balances.values.get(key) || 0) + cents(converted_value),
-    );
+    return;
   }
-  else{
-    const amount_value = Number((amountCents / 100).toFixed(2));
-    const converted_value = currencyConversion.convertToTarget(
-      currency,
-      default_currency,
-      amount_value,
-    );
-    balances.values.set(
-      key,
-      (balances.values.get(key) || 0) + cents(converted_value),
-    );
-  }
+  
   const amount_value = Number((amountCents / 100).toFixed(2));
-  const converted_value = currencyConversion.convertToTarget(
-    currency,
-    default_currency,
-    amount_value,
-  );
+  const converted_value =
+    normalizedDefaultCurrency === "INR"
+      ? currencyConversion.convertToINR(normalizedCurrency, amount_value)
+      : currencyConversion.convertToTarget(
+          normalizedCurrency,
+          normalizedDefaultCurrency,
+          amount_value,
+        );
+
   balances.values.set(
     key,
     (balances.values.get(key) || 0) + cents(converted_value),
@@ -51,11 +41,29 @@ const addBalance = (
 
 const cents = (value) => Math.round(Number(value) * 100);
 
+export const buildBalancePayload = (userId, defaultCurrency, balanceMap) => {
+  const normalizedDefaultCurrency = normalizeCurrency(defaultCurrency || "INR");
+
+  const balances = [...balanceMap.entries()]
+    .filter(([, value]) => Number(value) !== 0)
+    .map(([counterparty_id, value]) => ({
+      counterparty_id: Number(counterparty_id),
+      balances: Number((Number(value) / 100).toFixed(2)),
+    }));
+
+  return {
+    user_id: Number(userId),
+    default_currency: normalizedDefaultCurrency,
+    balances,
+  };
+};
+
 export default {
   getBalances: async (userId) => {
-    const default_currency = await User.findByPk(userId, {
+    const userRecord = await User.findByPk(userId, {
       attributes: ["default_currency"],
     });
+    const default_currency = userRecord?.default_currency || "INR";
 
     const balances = { userId, values: new Map() };
     const memberRows = await ExpenseMember.findAll({
@@ -94,18 +102,6 @@ export default {
       }
     }
 
-    // const grouped = new Map();
-    // for (const [key, amount] of balances.values) {
-    //   if (!amount) continue;
-    //   const [counterpartyId, currency] = key.split(":");
-    //   if (!grouped.has(counterpartyId)) grouped.set(counterpartyId, []);
-    //   grouped
-    //     .get(counterpartyId)
-    //     .push({ currency, amount: Number((amount / 100).toFixed(2)) });
-    // }
-    return [...balances.values.entries()].map(([counterparty_id, values]) => ({
-      counterparty_id: Number(counterparty_id),
-      balances: values,
-    }));
+    return buildBalancePayload(userId, default_currency, balances.values);
   },
 };
