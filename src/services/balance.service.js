@@ -1,16 +1,70 @@
 import Expense from "../models/Expense.js";
 import ExpenseMember from "../models/ExpenseMember.js";
+import User from "../models/User.js";
+import currencyConversion, {
+  normalizeCurrency,
+} from "../utils/currencyConversion.js";
 
-const addBalance = (balances, counterpartyId, currency, amountCents) => {
+const addBalance = (
+  balances,
+  counterpartyId,
+  currency,
+  amountCents,
+  default_currency,
+) => {
   if (String(counterpartyId) === String(balances.userId)) return;
-  const key = `${counterpartyId}:${currency}`;
-  balances.values.set(key, (balances.values.get(key) || 0) + amountCents);
+
+  const normalizedCurrency = normalizeCurrency(currency);
+  const normalizedDefaultCurrency = normalizeCurrency(default_currency);
+  const key = counterpartyId;
+  
+  if (normalizedCurrency === normalizedDefaultCurrency) {
+    balances.values.set(key, (balances.values.get(key) || 0) + amountCents);
+    return;
+  }
+  
+  const amount_value = Number((amountCents / 100).toFixed(2));
+  const converted_value =
+    normalizedDefaultCurrency === "INR"
+      ? currencyConversion.convertToINR(normalizedCurrency, amount_value)
+      : currencyConversion.convertToTarget(
+          normalizedCurrency,
+          normalizedDefaultCurrency,
+          amount_value,
+        );
+
+  balances.values.set(
+    key,
+    (balances.values.get(key) || 0) + cents(converted_value),
+  );
 };
 
 const cents = (value) => Math.round(Number(value) * 100);
 
+export const buildBalancePayload = (userId, defaultCurrency, balanceMap) => {
+  const normalizedDefaultCurrency = normalizeCurrency(defaultCurrency || "INR");
+
+  const balances = [...balanceMap.entries()]
+    .filter(([, value]) => Number(value) !== 0)
+    .map(([counterparty_id, value]) => ({
+      counterparty_id: Number(counterparty_id),
+      balances: Number((Number(value) / 100).toFixed(2)),
+    }));
+
+  return {
+    user_id: Number(userId),
+    default_currency: normalizedDefaultCurrency,
+    balances,
+  };
+};
+
 export default {
   getBalances: async (userId) => {
+    const userRecord = await User.findByPk(userId, {
+      attributes: ["default_currency"],
+    });
+    const default_currency = userRecord?.default_currency || "INR";
+
     const balances = { userId, values: new Map() };
     const memberRows = await ExpenseMember.findAll({
       where: { user_id: userId, is_paid: false },
@@ -33,6 +87,7 @@ export default {
         member.Expense.paid_by,
         member.Expense.currency,
         -cents(member.share_amount),
+        default_currency,
       );
     }
     for (const expense of paidExpenses) {
@@ -42,22 +97,11 @@ export default {
           member.user_id,
           expense.currency,
           cents(member.share_amount),
+          default_currency,
         );
       }
     }
 
-    const grouped = new Map();
-    for (const [key, amount] of balances.values) {
-      if (!amount) continue;
-      const [counterpartyId, currency] = key.split(":");
-      if (!grouped.has(counterpartyId)) grouped.set(counterpartyId, []);
-      grouped
-        .get(counterpartyId)
-        .push({ currency, amount: Number((amount / 100).toFixed(2)) });
-    }
-    return [...grouped.entries()].map(([counterparty_id, values]) => ({
-      counterparty_id: Number(counterparty_id),
-      balances: values,
-    }));
+    return buildBalancePayload(userId, default_currency, balances.values);
   },
 };
