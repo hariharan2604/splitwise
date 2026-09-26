@@ -1,6 +1,7 @@
 import Expense from "../models/Expense.js";
 import ExpenseMember from "../models/ExpenseMember.js";
 import User from "../models/User.js";
+import { NotFoundError } from "../utils/ApiError.js";
 import currencyConversion, {
   normalizeCurrency,
 } from "../utils/currencyConversion.js";
@@ -9,7 +10,7 @@ const addBalance = (
   balances,
   counterpartyId,
   currency,
-  amountCents,
+  amounttoCents,
   default_currency,
 ) => {
   if (String(counterpartyId) === String(balances.userId)) return;
@@ -19,11 +20,11 @@ const addBalance = (
   const key = counterpartyId;
   
   if (normalizedCurrency === normalizedDefaultCurrency) {
-    balances.values.set(key, (balances.values.get(key) || 0) + amountCents);
+    balances.values.set(key, (balances.values.get(key) || 0) + amounttoCents);
     return;
   }
   
-  const amount_value = Number((amountCents / 100).toFixed(2));
+  const amount_value = fromCents(amounttoCents);
   const converted_value =
     normalizedDefaultCurrency === "INR"
       ? currencyConversion.convertToINR(normalizedCurrency, amount_value)
@@ -35,11 +36,13 @@ const addBalance = (
 
   balances.values.set(
     key,
-    (balances.values.get(key) || 0) + cents(converted_value),
+    (balances.values.get(key) || 0) + toCents(converted_value),
   );
 };
 
-const cents = (value) => Math.round(Number(value) * 100);
+const toCents = (value) => Math.round(Number(value) * 100);
+
+const fromCents = (value) => Number((Number(value) / 100).toFixed(2));
 
 export const buildBalancePayload = (userId, defaultCurrency, balanceMap) => {
   const normalizedDefaultCurrency = normalizeCurrency(defaultCurrency || "INR");
@@ -48,7 +51,7 @@ export const buildBalancePayload = (userId, defaultCurrency, balanceMap) => {
     .filter(([, value]) => Number(value) !== 0)
     .map(([counterparty_id, value]) => ({
       counterparty_id: Number(counterparty_id),
-      balances: Number((Number(value) / 100).toFixed(2)),
+      balances: fromCents(value),
     }));
 
   return {
@@ -63,6 +66,7 @@ export default {
     const userRecord = await User.findByPk(userId, {
       attributes: ["default_currency"],
     });
+    if(!userRecord) throw new NotFoundError("User not found");
     const default_currency = userRecord?.default_currency || "INR";
 
     const balances = { userId, values: new Map() };
@@ -86,7 +90,7 @@ export default {
         balances,
         member.Expense.paid_by,
         member.Expense.currency,
-        -cents(member.share_amount),
+        -toCents(member.share_amount),
         default_currency,
       );
     }
@@ -96,7 +100,7 @@ export default {
           balances,
           member.user_id,
           expense.currency,
-          cents(member.share_amount),
+          toCents(member.share_amount),
           default_currency,
         );
       }
